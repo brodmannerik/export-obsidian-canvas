@@ -1,4 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { Text, Theme } from "@radix-ui/themes";
+import "@radix-ui/themes/styles.css";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 
 interface CanvasNode {
@@ -29,193 +31,49 @@ interface CanvasData {
   edges: CanvasEdge[];
 }
 
-// Capability to load and parse .canvas files
-const loadCanvasFile = async (file: File): Promise<CanvasData> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const content = e.target?.result as string;
-        const data = JSON.parse(content);
-        resolve(data);
-      } catch (error) {
-        reject(error);
-      }
-    };
-    reader.onerror = () => reject(new Error("Failed to read file"));
-    reader.readAsText(file);
-  });
-};
-
 function App() {
   const [canvasData, setCanvasData] = useState<CanvasData | null>(null);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [darkMode, setDarkMode] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nodeCount, setNodeCount] = useState(0);
   const [edgeCount, setEdgeCount] = useState(0);
   const canvasRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle file uploads
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Always use light mode
+  const darkMode = false;
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const data = await loadCanvasFile(file);
-      setCanvasData(data);
-      setNodeCount(data.nodes.length);
-      setEdgeCount(data.edges.length);
-      setTimeout(() => centerCanvas(data), 100); // Give it time to render
-    } catch (err) {
-      console.error("Error loading canvas file:", err);
-      setError("Failed to load canvas file. Is it a valid .canvas file?");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Use hardcoded sample data on initial load
+  // Load canvas from public directory
   useEffect(() => {
-    const providedCanvasData = {
-      nodes: [
-        {
-          id: "e2f1e32e546c715f",
-          type: "text",
-          text: "[[Peoples Temple 1978]]",
-          x: -393,
-          y: -247,
-          width: 213,
-          height: 60,
-        },
-        {
-          id: "e8b80945de9474eb",
-          type: "file",
-          file: "5. Attachements/Pasted image 20250407160200.png",
-          x: -745,
-          y: 40,
-          width: 352,
-          height: 400,
-        },
-        {
-          id: "68f41869c63b45d5",
-          type: "file",
-          file: "5. Attachements/Pasted image 20250407163350.png",
-          x: -340,
-          y: 40,
-          width: 260,
-          height: 400,
-        },
-        {
-          id: "a9dbda03f40635fb",
-          type: "file",
-          file: "5. Attachements/Pasted image 20250407163420.png",
-          x: -40,
-          y: 40,
-          width: 300,
-          height: 400,
-        },
-        {
-          id: "4301990d8a2014a2",
-          type: "link",
-          url: "https://californiahistoricalsociety.org/blog/how-to-access-peoples-temple-collections-and-information-online/",
-          x: -440,
-          y: 540,
-          width: 400,
-          height: 100,
-        },
-        {
-          id: "c4a0c2792a3b2c87",
-          type: "text",
-          text: "[[Order of the Solar Temple 1994-1997]]",
-          x: 33,
-          y: -247,
-          width: 280,
-          height: 60,
-        },
-        {
-          id: "fed1338147a9fa5f",
-          type: "file",
-          file: "5. Attachements/Pasted image 20250407165001.png",
-          x: -20,
-          y: -50,
-          width: 200,
-          height: 50,
-        },
-        {
-          id: "a062f77fab0a5ea0",
-          type: "file",
-          file: "5. Attachements/Pasted image 20250407165030.png",
-          x: 200,
-          y: -50,
-          width: 200,
-          height: 50,
-        },
-        {
-          id: "a869b83790df790f",
-          type: "text",
-          text: "[[Heaven's Gate (1997)]]",
-          x: 600,
-          y: -246,
-          width: 250,
-          height: 60,
-        },
-        {
-          id: "f342c6fe91f54aa4",
-          type: "file",
-          file: "5. Attachements/Pasted image 20250407164111.png",
-          x: 360,
-          y: 40,
-          width: 400,
-          height: 400,
-        },
-      ],
-      edges: [
-        {
-          id: "ea19b98cdeb1ad80",
-          fromNode: "e8b80945de9474eb",
-          fromSide: "top",
-          toNode: "e2f1e32e546c715f",
-          toSide: "bottom",
-        },
-        {
-          id: "58edbc4896c0557a",
-          fromNode: "fed1338147a9fa5f",
-          fromSide: "top",
-          toNode: "c4a0c2792a3b2c87",
-          toSide: "bottom",
-        },
-        {
-          id: "05e0155379b9f45e",
-          fromNode: "a062f77fab0a5ea0",
-          fromSide: "top",
-          toNode: "c4a0c2792a3b2c87",
-          toSide: "bottom",
-        },
-        {
-          id: "4b820b63c9049981",
-          fromNode: "f342c6fe91f54aa4",
-          fromSide: "top",
-          toNode: "a869b83790df790f",
-          toSide: "bottom",
-        },
-      ],
+    const loadCanvasFromPublic = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch the canvas file from public directory
+        const response = await fetch("/canvas/Beliefs.canvas");
+        if (!response.ok) {
+          throw new Error(`Failed to load canvas file: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        setCanvasData(data);
+        setNodeCount(data.nodes.length);
+        setEdgeCount(data.edges.length);
+
+        // Give the DOM time to render before centering
+        setTimeout(() => centerCanvas(data), 100);
+      } catch (err) {
+        console.error("Error loading canvas:", err);
+        setError(err instanceof Error ? err.message : "Failed to load canvas");
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setCanvasData(providedCanvasData);
-    setNodeCount(providedCanvasData.nodes.length);
-    setEdgeCount(providedCanvasData.edges.length);
-
-    // Give the DOM time to render
-    setTimeout(() => centerCanvas(providedCanvasData), 100);
+    loadCanvasFromPublic();
   }, []);
 
   const centerCanvas = (data: CanvasData) => {
@@ -241,20 +99,27 @@ function App() {
     setScale(0.8);
   };
 
+  // Improved mouse handling for better dragging experience
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return; // Only left mouse button
     setDragging(true);
     setDragStart({ x: e.clientX, y: e.clientY });
+    e.preventDefault(); // Prevent text selection during drag
   };
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!dragging) return;
 
+      // Calculate position change, considering the current scale
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
+
       setPosition((prev) => ({
-        x: prev.x + (e.clientX - dragStart.x),
-        y: prev.y + (e.clientY - dragStart.y),
+        x: prev.x + dx,
+        y: prev.y + dy,
       }));
+
       setDragStart({ x: e.clientX, y: e.clientY });
     },
     [dragging, dragStart]
@@ -340,6 +205,8 @@ function App() {
       overflow: "auto",
       color: darkMode ? "#E2E8F0" : "#1A202C",
       fontSize: node.fontSize ? `${node.fontSize}px` : "14px",
+      userSelect: "none" as const,
+      cursor: "default",
     };
 
     return (
@@ -347,7 +214,6 @@ function App() {
         key={node.id}
         style={style}
         className={`canvas-node canvas-node-${node.type}`}
-        title={`Node ID: ${node.id}`}
       >
         {node.type === "text" && (
           <div
@@ -389,8 +255,7 @@ function App() {
               <div className="file-subpath">Subpath: {node.subpath}</div>
             )}
             <div className="file-placeholder">
-              {/* @ts-ignore */}
-              {node.file.endsWith(".png") && (
+              {node.file?.endsWith(".png") && (
                 <div className="image-placeholder">
                   <svg
                     width="48"
@@ -421,8 +286,7 @@ function App() {
                       strokeLinejoin="round"
                     />
                   </svg>
-                  {/* @ts-ignore */}
-                  <span>Image: {node.file.split("/").pop()}</span>
+                  <span>Image: {node.file?.split("/").pop()}</span>
                 </div>
               )}
             </div>
@@ -573,81 +437,41 @@ function App() {
   };
 
   return (
-    <div className={`app-container ${darkMode ? "dark-mode" : "light-mode"}`}>
-      <div className="toolbar">
-        <div className="zoom-controls">
-          <button
-            onClick={() => setScale((s: number) => Math.max(s - 0.1, 0.1))}
-            className="zoom-button"
-          >
-            -
-          </button>
-          <span className="zoom-level">{Math.round(scale * 100)}%</span>
-          <button
-            onClick={() => setScale((s: number) => Math.min(s + 0.1, 5))}
-            className="zoom-button"
-          >
-            +
-          </button>
-        </div>
-        <div className="canvas-stats">
-          {nodeCount} nodes, {edgeCount} edges
-        </div>
-        <div className="toolbar-actions">
-          <input
-            type="file"
-            accept=".canvas"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            style={{ display: "none" }}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="action-button"
-          >
-            Open Canvas File
-          </button>
-          <button
-            onClick={() => canvasData && centerCanvas(canvasData)}
-            className="action-button"
-          >
-            Center Canvas
-          </button>
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="theme-toggle"
-          >
-            {darkMode ? "Light Mode" : "Dark Mode"}
-          </button>
-        </div>
-      </div>
+    <Theme>
+      <div className="app-container light-mode">
+        {loading && <div className="loading-overlay">Loading canvas...</div>}
+        {error && <div className="error-message">{error}</div>}
 
-      {loading && <div className="loading-overlay">Loading canvas...</div>}
-
-      {error && <div className="error-message">{error}</div>}
-
-      <div
-        ref={canvasRef}
-        className="canvas-viewer"
-        onMouseDown={handleMouseDown}
-        onWheel={handleWheel}
-        style={{
-          cursor: dragging ? "grabbing" : "grab",
-        }}
-      >
-        <div className="canvas-grid"></div>
         <div
-          className="canvas-content"
+          ref={canvasRef}
+          className="canvas-viewer"
+          onMouseDown={handleMouseDown}
+          onWheel={handleWheel}
           style={{
-            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-            transformOrigin: "0 0",
+            cursor: dragging ? "grabbing" : "grab",
           }}
         >
-          {canvasData?.edges.map(renderEdge)}
-          {canvasData?.nodes.map(renderNode)}
+          <div className="canvas-grid"></div>
+          <div
+            className="canvas-content"
+            style={{
+              transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+              transformOrigin: "0 0",
+            }}
+          >
+            {canvasData?.edges.map(renderEdge)}
+            {canvasData?.nodes.map(renderNode)}
+          </div>
+
+          {/* Radix UI Zoom indicator */}
+          <div className="zoom-indicator">
+            <Text size="2" weight="medium">
+              {Math.round(scale * 100)}%
+            </Text>
+          </div>
         </div>
       </div>
-    </div>
+    </Theme>
   );
 }
 

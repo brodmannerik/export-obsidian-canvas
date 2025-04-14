@@ -24,11 +24,11 @@
 
 .light-mode {
   --bg-color: #f7f7f7;
-  --toolbar-bg: #ffffff;
   --node-border: rgba(0, 0, 0, 0.1);
   --text-color: #1a202c;
   --grid-color: rgba(0, 0, 0, 0.03);
   --grid-color-bold: rgba(0, 0, 0, 0.05);
+  --toolbar-bg: #ffffff;
   --button-bg: #f0f0f0;
   --button-hover: #e0e0e0;
   --button-active: #d0d0d0;
@@ -138,7 +138,7 @@
   position: relative;
   overflow: hidden;
   background-color: var(--bg-color);
-  cursor: grab;
+  pointer-events: auto; /* Ensure the canvas itself can be dragged */
 }
 
 .canvas-viewer:active {
@@ -185,6 +185,28 @@
   position: absolute;
   width: 100%;
   height: 100%;
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.canvas-content:active {
+  cursor: grabbing;
+}
+
+/* Zoom indicator */
+.zoom-indicator {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  background-color: white;
+  border-radius: 4px;
+  padding: 6px 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 
 .empty-canvas {
@@ -203,10 +225,7 @@
   overflow: auto;
   box-sizing: border-box;
   transition: box-shadow 0.2s ease-in-out;
-}
-
-.canvas-node:hover {
-  box-shadow: 0 0 0 2px rgba(138, 155, 252, 0.5) !important;
+  pointer-events: none; /* Make nodes non-interactive */
 }
 
 .canvas-node p {
@@ -268,6 +287,7 @@
   color: #6b9cff;
   text-decoration: none;
   word-break: break-all;
+  pointer-events: auto;
 }
 
 .canvas-node-link .link-url:hover {
@@ -290,7 +310,7 @@
 
 .error-message {
   position: absolute;
-  top: 80px;
+  top: 20px;
   left: 50%;
   transform: translateX(-50%);
   background-color: #e53e3e;
@@ -307,6 +327,7 @@
 .canvas-node::-webkit-scrollbar {
   width: 6px;
   height: 6px;
+  pointer-events: auto;
 }
 
 .canvas-node::-webkit-scrollbar-track {

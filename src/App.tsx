@@ -136,31 +136,48 @@ function App() {
     setDragging(false);
   }, []);
 
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
+  // First, define your wheel handler with useCallback
+  const handleWheel = useCallback(
+    (e: WheelEvent) => {
+      e.preventDefault(); // This will now work properly
 
-    // Get the dimensions of the viewport
-    const viewportWidth = canvasRef.current?.clientWidth || 0;
-    const viewportHeight = canvasRef.current?.clientHeight || 0;
+      // Get the dimensions of the viewport
+      const viewportWidth = canvasRef.current?.clientWidth || 0;
+      const viewportHeight = canvasRef.current?.clientHeight || 0;
 
-    // Calculate the position of the viewport center in the scaled coordinate system
-    const viewportCenterX = (viewportWidth / 2 - position.x) / scale;
-    const viewportCenterY = (viewportHeight / 2 - position.y) / scale;
+      // Calculate the position of the viewport center in the scaled coordinate system
+      const viewportCenterX = (viewportWidth / 2 - position.x) / scale;
+      const viewportCenterY = (viewportHeight / 2 - position.y) / scale;
 
-    // Calculate scale change
-    const delta = -e.deltaY * 0.001;
-    const newScale = Math.min(Math.max(scale + delta, 0.1), 5);
-    const scaleFactor = newScale / scale;
+      // Calculate scale change
+      const delta = -e.deltaY * 0.001;
+      const newScale = Math.min(Math.max(scale + delta, 0.1), 5);
+      const scaleFactor = newScale / scale;
 
-    // Adjust position to keep the center point stable
-    const newPosition = {
-      x: position.x - viewportCenterX * (scaleFactor - 1) * scale,
-      y: position.y - viewportCenterY * (scaleFactor - 1) * scale,
+      // Adjust position to keep the center point stable
+      const newPosition = {
+        x: position.x - viewportCenterX * (scaleFactor - 1) * scale,
+        y: position.y - viewportCenterY * (scaleFactor - 1) * scale,
+      };
+
+      setPosition(newPosition);
+      setScale(newScale);
+    },
+    [position, scale]
+  );
+
+  // Then use useEffect to correctly add the event listener
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Add wheel event with passive: false
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      canvas.removeEventListener("wheel", handleWheel);
     };
-
-    setPosition(newPosition);
-    setScale(newScale);
-  };
+  }, [handleWheel]);
 
   useEffect(() => {
     if (dragging) {
@@ -178,43 +195,39 @@ function App() {
   }, [dragging, handleMouseMove, handleMouseUp]);
 
   // Calculate distance between two touches for pinch-zoom
-  const getDistance = (touches: React.TouchList): number => {
+  const getDistance = useCallback((touches: TouchList): number => {
     if (touches.length < 2) return 0;
-
     const dx = touches[0].clientX - touches[1].clientX;
     const dy = touches[0].clientY - touches[1].clientY;
     return Math.sqrt(dx * dx + dy * dy);
-  };
+  }, []);
 
-  // Get midpoint between two touches for centered zooming
-  const getMidpoint = (touches: React.TouchList): { x: number; y: number } => {
-    if (touches.length < 2) {
-      return { x: touches[0].clientX, y: touches[0].clientY };
-    }
+  // Get midpoint between touches
+  const getMidpoint = useCallback(
+    (touches: TouchList): { x: number; y: number } => {
+      if (touches.length < 2) {
+        return { x: touches[0].clientX, y: touches[0].clientY };
+      }
 
-    return {
-      x: (touches[0].clientX + touches[1].clientX) / 2,
-      y: (touches[0].clientY + touches[1].clientY) / 2,
-    };
-  };
+      return {
+        x: (touches[0].clientX + touches[1].clientX) / 2,
+        y: (touches[0].clientY + touches[1].clientY) / 2,
+      };
+    },
+    []
+  );
 
-  // Remove the inline touch event handlers from JSX and use direct DOM event listeners
-
-  // First, make these handlers memoized with useCallback
   const handleTouchStart = useCallback(
     (e: TouchEvent) => {
-      // Don't call preventDefault here - we'll handle it differently
       if (e.touches.length === 1) {
         lastTouchRef.current = {
           x: e.touches[0].clientX,
           y: e.touches[0].clientY,
         };
       } else if (e.touches.length === 2) {
-        // @ts-ignore
         const distance = getDistance(e.touches);
         setTouchStartDistance(distance);
         setTouchStartScale(scale);
-        // @ts-ignore
         lastTouchRef.current = getMidpoint(e.touches);
       }
     },
@@ -223,7 +236,7 @@ function App() {
 
   const handleTouchMove = useCallback(
     (e: TouchEvent) => {
-      // Don't call preventDefault here either
+      // Touch move logic
       if (e.touches.length === 1 && lastTouchRef.current) {
         const dx = e.touches[0].clientX - lastTouchRef.current.x;
         const dy = e.touches[0].clientY - lastTouchRef.current.y;
@@ -242,16 +255,17 @@ function App() {
         touchStartDistance &&
         touchStartDistance > 0
       ) {
-        // @ts-ignore
+        // Pinch zoom logic
         const currentDistance = getDistance(e.touches);
         const scaleFactor = currentDistance / touchStartDistance;
         const newScale = Math.min(
           Math.max(touchStartScale * scaleFactor, 0.1),
           5
         );
-        // @ts-ignore
-        const midpoint = getMidpoint(e.touches);
 
+        setScale(newScale);
+
+        const midpoint = getMidpoint(e.touches);
         if (lastTouchRef.current) {
           const dx = midpoint.x - lastTouchRef.current.x;
           const dy = midpoint.y - lastTouchRef.current.y;
@@ -262,49 +276,36 @@ function App() {
           }));
         }
 
-        setScale(newScale);
         lastTouchRef.current = midpoint;
       }
     },
     [touchStartDistance, touchStartScale, getDistance, getMidpoint]
   );
 
-  const handleTouchEnd = () => {
-    // Reset touch state
+  const handleTouchEnd = useCallback(() => {
     setTouchStartDistance(null);
-    setTouchStartScale(scale);
     lastTouchRef.current = null;
-  };
+  }, []);
 
-  // Then add this useEffect to correctly attach the non-passive event listeners
+  // Now add a useEffect to attach all event listeners properly
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // This function will prevent default behavior
-    const preventDefaults = (e: Event) => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
-
-    // Attach event listeners with passive: false
-    canvas.addEventListener("touchstart", preventDefaults, { passive: false });
-    canvas.addEventListener("touchmove", preventDefaults, { passive: false });
-
-    // Attach our handlers
-    canvas.addEventListener("touchstart", handleTouchStart);
-    canvas.addEventListener("touchmove", handleTouchMove);
+    // Add all non-passive event listeners
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
     canvas.addEventListener("touchend", handleTouchEnd);
 
     return () => {
-      // Clean up all listeners
-      canvas.removeEventListener("touchstart", preventDefaults);
-      canvas.removeEventListener("touchmove", preventDefaults);
+      // Clean up all event listeners
+      canvas.removeEventListener("wheel", handleWheel);
       canvas.removeEventListener("touchstart", handleTouchStart);
       canvas.removeEventListener("touchmove", handleTouchMove);
       canvas.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+  }, [handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd]);
 
   const getNodeColor = (node: CanvasNode) => {
     if (node.color) return node.color;
@@ -582,7 +583,6 @@ function App() {
           ref={canvasRef}
           className="canvas-viewer"
           onMouseDown={handleMouseDown}
-          onWheel={handleWheel}
           style={{
             cursor: dragging ? "grabbing" : "grab",
             touchAction: "none", // This is still important

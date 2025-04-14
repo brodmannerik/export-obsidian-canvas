@@ -43,6 +43,13 @@ function App() {
   const [edgeCount, setEdgeCount] = useState(0);
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  // Add new state for touch events
+  const [touchStartDistance, setTouchStartDistance] = useState<number | null>(
+    null
+  );
+  const [touchStartScale, setTouchStartScale] = useState(1);
+  const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
+
   // Always use light mode
   const darkMode = false;
 
@@ -169,6 +176,135 @@ function App() {
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [dragging, handleMouseMove, handleMouseUp]);
+
+  // Calculate distance between two touches for pinch-zoom
+  const getDistance = (touches: React.TouchList): number => {
+    if (touches.length < 2) return 0;
+
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  // Get midpoint between two touches for centered zooming
+  const getMidpoint = (touches: React.TouchList): { x: number; y: number } => {
+    if (touches.length < 2) {
+      return { x: touches[0].clientX, y: touches[0].clientY };
+    }
+
+    return {
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2,
+    };
+  };
+
+  // Remove the inline touch event handlers from JSX and use direct DOM event listeners
+
+  // First, make these handlers memoized with useCallback
+  const handleTouchStart = useCallback(
+    (e: TouchEvent) => {
+      // Don't call preventDefault here - we'll handle it differently
+      if (e.touches.length === 1) {
+        lastTouchRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+        };
+      } else if (e.touches.length === 2) {
+        // @ts-ignore
+        const distance = getDistance(e.touches);
+        setTouchStartDistance(distance);
+        setTouchStartScale(scale);
+        // @ts-ignore
+        lastTouchRef.current = getMidpoint(e.touches);
+      }
+    },
+    [scale, getDistance, getMidpoint]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: TouchEvent) => {
+      // Don't call preventDefault here either
+      if (e.touches.length === 1 && lastTouchRef.current) {
+        const dx = e.touches[0].clientX - lastTouchRef.current.x;
+        const dy = e.touches[0].clientY - lastTouchRef.current.y;
+
+        setPosition((prev) => ({
+          x: prev.x + dx,
+          y: prev.y + dy,
+        }));
+
+        lastTouchRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+        };
+      } else if (
+        e.touches.length === 2 &&
+        touchStartDistance &&
+        touchStartDistance > 0
+      ) {
+        // @ts-ignore
+        const currentDistance = getDistance(e.touches);
+        const scaleFactor = currentDistance / touchStartDistance;
+        const newScale = Math.min(
+          Math.max(touchStartScale * scaleFactor, 0.1),
+          5
+        );
+        // @ts-ignore
+        const midpoint = getMidpoint(e.touches);
+
+        if (lastTouchRef.current) {
+          const dx = midpoint.x - lastTouchRef.current.x;
+          const dy = midpoint.y - lastTouchRef.current.y;
+
+          setPosition((prev) => ({
+            x: prev.x + dx,
+            y: prev.y + dy,
+          }));
+        }
+
+        setScale(newScale);
+        lastTouchRef.current = midpoint;
+      }
+    },
+    [touchStartDistance, touchStartScale, getDistance, getMidpoint]
+  );
+
+  const handleTouchEnd = () => {
+    // Reset touch state
+    setTouchStartDistance(null);
+    setTouchStartScale(scale);
+    lastTouchRef.current = null;
+  };
+
+  // Then add this useEffect to correctly attach the non-passive event listeners
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // This function will prevent default behavior
+    const preventDefaults = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    // Attach event listeners with passive: false
+    canvas.addEventListener("touchstart", preventDefaults, { passive: false });
+    canvas.addEventListener("touchmove", preventDefaults, { passive: false });
+
+    // Attach our handlers
+    canvas.addEventListener("touchstart", handleTouchStart);
+    canvas.addEventListener("touchmove", handleTouchMove);
+    canvas.addEventListener("touchend", handleTouchEnd);
+
+    return () => {
+      // Clean up all listeners
+      canvas.removeEventListener("touchstart", preventDefaults);
+      canvas.removeEventListener("touchmove", preventDefaults);
+      canvas.removeEventListener("touchstart", handleTouchStart);
+      canvas.removeEventListener("touchmove", handleTouchMove);
+      canvas.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
 
   const getNodeColor = (node: CanvasNode) => {
     if (node.color) return node.color;
@@ -449,6 +585,7 @@ function App() {
           onWheel={handleWheel}
           style={{
             cursor: dragging ? "grabbing" : "grab",
+            touchAction: "none", // This is still important
           }}
         >
           <div className="canvas-grid"></div>
@@ -467,6 +604,13 @@ function App() {
           <div className="zoom-indicator">
             <Text size="2" weight="medium">
               {Math.round(scale * 100)}%
+            </Text>
+          </div>
+
+          {/* Radix UI Node/Edge counter */}
+          <div className="node-count-indicator">
+            <Text size="2" weight="medium">
+              {nodeCount} nodes, {edgeCount} edges
             </Text>
           </div>
         </div>

@@ -1,0 +1,323 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+/* Dark Mode / Light Mode Themes */
+.dark-mode {
+  --bg-color: #1e1e1e;
+  --toolbar-bg: #272727;
+  --node-border: rgba(255, 255, 255, 0.1);
+  --text-color: #e2e8f0;
+  --grid-color: rgba(255, 255, 255, 0.03);
+  --grid-color-bold: rgba(255, 255, 255, 0.05);
+  --button-bg: #383838;
+  --button-hover: #505050;
+  --button-active: #606060;
+  --button-text: #e2e8f0;
+}
+
+.light-mode {
+  --bg-color: #f7f7f7;
+  --toolbar-bg: #ffffff;
+  --node-border: rgba(0, 0, 0, 0.1);
+  --text-color: #1a202c;
+  --grid-color: rgba(0, 0, 0, 0.03);
+  --grid-color-bold: rgba(0, 0, 0, 0.05);
+  --button-bg: #f0f0f0;
+  --button-hover: #e0e0e0;
+  --button-active: #d0d0d0;
+  --button-text: #1a202c;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: var(--toolbar-bg);
+  border-bottom: 1px solid var(--node-border);
+  z-index: 100;
+  color: var(--text-color);
+}
+
+.toolbar input[type="file"] {
+  display: none;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.upload-button {
+  background-color: #7f6df2;
+  color: white;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-right: 20px;
+}
+
+.upload-button:hover {
+  background-color: #6a5acd;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.canvas-stats {
+  font-size: 13px;
+  color: var(--text-color);
+  opacity: 0.8;
+}
+
+.zoom-button {
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  border: 1px solid var(--node-border);
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s;
+}
+
+.zoom-button:hover {
+  background-color: var(--button-hover);
+}
+
+.zoom-button:active {
+  background-color: var(--button-active);
+}
+
+.zoom-level {
+  font-size: 14px;
+  min-width: 50px;
+  text-align: center;
+  color: var(--text-color);
+}
+
+.action-button,
+.theme-toggle {
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  border: 1px solid var(--node-border);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.action-button:hover,
+.theme-toggle:hover {
+  background-color: var(--button-hover);
+}
+
+.action-button:active,
+.theme-toggle:active {
+  background-color: var(--button-active);
+}
+
+.canvas-viewer {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  cursor: grab;
+}
+
+.canvas-viewer:active {
+  cursor: grabbing;
+}
+
+/* Add a grid background */
+.canvas-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background-size: 40px 40px;
+  background-image: linear-gradient(
+      to right,
+      var(--grid-color) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+  z-index: 0;
+}
+
+.canvas-grid:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background-size: 200px 200px;
+  background-image: linear-gradient(
+      to right,
+      var(--grid-color-bold) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, var(--grid-color-bold) 1px, transparent 1px);
+  z-index: 0;
+}
+
+.canvas-content {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.empty-canvas {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: #666;
+  font-size: 18px;
+}
+
+/* Node styling */
+.canvas-node {
+  position: absolute;
+  border-radius: 3px;
+  overflow: auto;
+  box-sizing: border-box;
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+.canvas-node:hover {
+  box-shadow: 0 0 0 2px rgba(138, 155, 252, 0.5) !important;
+}
+
+.canvas-node p {
+  margin: 0 0 10px;
+}
+
+/* Node type specific styling */
+.canvas-node-text {
+  padding: 10px 12px;
+  line-height: 1.4;
+}
+
+.canvas-node-file .file-header,
+.canvas-node-link .link-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--node-border);
+}
+
+.wiki-link {
+  color: #6b9cff;
+  border-bottom: 1px solid rgba(107, 156, 255, 0.3);
+  cursor: pointer;
+}
+
+.canvas-node-file .file-icon,
+.canvas-node-link .link-icon {
+  flex-shrink: 0;
+}
+
+.canvas-node-file .file-placeholder {
+  height: 75%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-node-file .image-placeholder {
+  background-color: rgba(128, 128, 128, 0.1);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  gap: 10px;
+}
+
+.canvas-node-file .image-placeholder span {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.canvas-node-link .link-url {
+  color: #6b9cff;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.canvas-node-link .link-url:hover {
+  text-decoration: underline;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--bg-color);
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  color: var(--text-color);
+}
+
+.error-message {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #e53e3e;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  max-width: 80%;
+  text-align: center;
+}
+
+/* Scrollbar styling */
+.canvas-node::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.canvas-node::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.canvas-node::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 3px;
+}
+
+.canvas-node::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.5);
+}

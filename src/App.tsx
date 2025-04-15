@@ -53,6 +53,19 @@ function App() {
   // Always use light mode
   const darkMode = false;
 
+  // Update the getImagePath function to remove the console.log
+  const getImagePath = (obsidianPath: string | undefined): string => {
+    if (!obsidianPath) return "";
+
+    // Extract just the filename from the path (everything after the last slash)
+    const filename = obsidianPath.split("/").pop();
+
+    if (!filename) return "";
+
+    // Return path to the image in the flat images folder
+    return `/images/${filename}`;
+  };
+
   // Load canvas from public directory
   useEffect(() => {
     const loadCanvasFromPublic = async () => {
@@ -391,39 +404,60 @@ function App() {
             {node.subpath && (
               <div className="file-subpath">Subpath: {node.subpath}</div>
             )}
-            <div className="file-placeholder">
-              {node.file?.endsWith(".png") && (
-                <div className="image-placeholder">
-                  <svg
-                    width="48"
-                    height="48"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
+            <div className="file-content-container">
+              {node.file?.endsWith(".png") ||
+              node.file?.endsWith(".jpg") ||
+              node.file?.endsWith(".jpeg") ? (
+                <>
+                  <img
+                    src={getImagePath(node.file)}
+                    alt={node.file?.split("/").pop() || "Canvas image"}
+                    className="canvas-image"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                      // @ts-ignore
+                      e.currentTarget.nextSibling.style.display = "flex";
+                    }}
+                  />
+                  <div
+                    className="image-placeholder"
+                    style={{ display: "none" }}
                   >
-                    <path
-                      d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3Z"
-                      stroke={darkMode ? "#E2E8F0" : "#4A5568"}
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M8.5 10C9.32843 10 10 9.32843 10 8.5C10 7.67157 9.32843 7 8.5 7C7.67157 7 7 7.67157 7 8.5C7 9.32843 7.67157 10 8.5 10Z"
-                      stroke={darkMode ? "#E2E8F0" : "#4A5568"}
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M21 15L16 10L5 21"
-                      stroke={darkMode ? "#E2E8F0" : "#4A5568"}
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <span>Image: {node.file?.split("/").pop()}</span>
+                    <svg
+                      width="48"
+                      height="48"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3Z"
+                        stroke={darkMode ? "#E2E8F0" : "#4A5568"}
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M8.5 10C9.32843 10 10 9.32843 10 8.5C10 7.67157 9.32843 7 8.5 7C7.67157 7 7 7.67157 7 8.5C7 9.32843 7.67157 10 8.5 10Z"
+                        stroke={darkMode ? "#E2E8F0" : "#4A5568"}
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M21 15L16 10L5 21"
+                        stroke={darkMode ? "#E2E8F0" : "#4A5568"}
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    <span>Image not found: {node.file?.split("/").pop()}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="file-placeholder">
+                  <span>{node.file}</span>
                 </div>
               )}
             </div>

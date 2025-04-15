@@ -52,10 +52,6 @@ function App() {
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Add new state for touch events
-  const [touchStartDistance, setTouchStartDistance] = useState<number | null>(
-    null
-  );
-  const [touchStartScale, setTouchStartScale] = useState(1);
   const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
 
   // Add ref to track current position and scale without re-renders
@@ -365,73 +361,38 @@ function App() {
     []
   );
 
-  const handleTouchStart = useCallback(
-    (e: TouchEvent) => {
-      if (e.touches.length === 1) {
-        lastTouchRef.current = {
-          x: e.touches[0].clientX,
-          y: e.touches[0].clientY,
-        };
-      } else if (e.touches.length === 2) {
-        const distance = getDistance(e.touches);
-        setTouchStartDistance(distance);
-        setTouchStartScale(scale);
-        lastTouchRef.current = getMidpoint(e.touches);
-      }
-    },
-    [scale, getDistance, getMidpoint]
-  );
+  // Modify the handleTouchStart function to ignore zoom gestures
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    // Only handle single-touch events for panning
+    if (e.touches.length === 1) {
+      lastTouchRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+    }
+    // Ignore multi-touch (pinch) events by not handling them
+  }, []);
 
-  const handleTouchMove = useCallback(
-    (e: TouchEvent) => {
-      // Touch move logic
-      if (e.touches.length === 1 && lastTouchRef.current) {
-        const dx = e.touches[0].clientX - lastTouchRef.current.x;
-        const dy = e.touches[0].clientY - lastTouchRef.current.y;
+  // Modify the handleTouchMove function to ignore zoom gestures
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    // Only handle single-touch events for panning
+    if (e.touches.length === 1 && lastTouchRef.current) {
+      const dx = e.touches[0].clientX - lastTouchRef.current.x;
+      const dy = e.touches[0].clientY - lastTouchRef.current.y;
 
-        setPosition((prev) => ({
-          x: prev.x + dx,
-          y: prev.y + dy,
-        }));
+      setPosition((prev) => ({
+        x: prev.x + dx,
+        y: prev.y + dy,
+      }));
 
-        lastTouchRef.current = {
-          x: e.touches[0].clientX,
-          y: e.touches[0].clientY,
-        };
-      } else if (
-        e.touches.length === 2 &&
-        touchStartDistance &&
-        touchStartDistance > 0
-      ) {
-        // Pinch zoom logic
-        const currentDistance = getDistance(e.touches);
-        const scaleFactor = currentDistance / touchStartDistance;
-        const newScale = Math.min(
-          Math.max(touchStartScale * scaleFactor, 0.1),
-          5
-        );
-
-        setScale(newScale);
-
-        const midpoint = getMidpoint(e.touches);
-        if (lastTouchRef.current) {
-          const dx = midpoint.x - lastTouchRef.current.x;
-          const dy = midpoint.y - lastTouchRef.current.y;
-
-          setPosition((prev) => ({
-            x: prev.x + dx,
-            y: prev.y + dy,
-          }));
-        }
-
-        lastTouchRef.current = midpoint;
-      }
-    },
-    [touchStartDistance, touchStartScale, getDistance, getMidpoint]
-  );
+      lastTouchRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+    }
+  }, []);
 
   const handleTouchEnd = useCallback(() => {
-    setTouchStartDistance(null);
     lastTouchRef.current = null;
   }, []);
 

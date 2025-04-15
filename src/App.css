@@ -74,11 +74,11 @@
 
 .zoom-controls {
   position: absolute;
-  bottom: 16px;
+  top: 16px;
   left: 16px;
   background-color: white;
   border-radius: 4px;
-  padding: 6px 10px; /* Match padding with node-count-indicator */
+  padding: 6px 10px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
   z-index: 10;
 }
@@ -113,9 +113,9 @@
 
 @media (max-width: 768px) {
   .zoom-controls {
-    bottom: 12px;
+    top: 12px; /* Slightly smaller margin on mobile */
     left: 12px;
-    padding: 4px;
+    padding: 4px 8px;
   }
 
   .zoom-text {
@@ -255,7 +255,7 @@
 /* Zoom indicator */
 .zoom-indicator {
   position: absolute;
-  bottom: 16px;
+  top: 16px; /* Changed from bottom to top */
   left: 16px;
   background-color: white;
   border-radius: 4px;
@@ -271,7 +271,7 @@
 /* Node count indicator */
 .node-count-indicator {
   position: absolute;
-  bottom: 16px;
+  top: 16px; /* Changed from bottom to top */
   right: 16px;
   background-color: white;
   border-radius: 4px;
@@ -292,8 +292,13 @@
     font-size: 12px;
   }
 
+  .zoom-indicator {
+    top: 12px;
+    left: 12px;
+  }
+
   .node-count-indicator {
-    bottom: 12px;
+    top: 12px;
     right: 12px;
   }
 

@@ -1,6 +1,14 @@
-import { Text, Theme } from "@radix-ui/themes";
+import { Text, Theme, Button, Flex } from "@radix-ui/themes";
 import "@radix-ui/themes/styles.css";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+  useTransition,
+} from "react";
+import { debounce } from "lodash";
 import "./App.css";
 
 interface CanvasNode {
@@ -49,6 +57,27 @@ function App() {
   );
   const [touchStartScale, setTouchStartScale] = useState(1);
   const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Add ref to track current position and scale without re-renders
+  const transformRef = useRef({ scale: 1, x: 0, y: 0 });
+  const [isPending, startTransition] = useTransition();
+
+  // Keep the ref in sync with the state
+  useEffect(() => {
+    transformRef.current = { scale, x: position.x, y: position.y };
+  }, [scale, position]);
+
+  // Create a debounced state update function
+  const debouncedStateUpdate = useMemo(
+    () =>
+      debounce((newScale, newPosition) => {
+        startTransition(() => {
+          setScale(newScale);
+          setPosition(newPosition);
+        });
+      }, 20),
+    []
+  );
 
   // Always use light mode
   const darkMode = false;
@@ -149,51 +178,140 @@ function App() {
     setDragging(false);
   }, []);
 
-  // First, define your wheel handler with useCallback
+  // Optimized wheel handler
   const handleWheel = useCallback(
     (e: WheelEvent) => {
-      e.preventDefault();
-
-      // Get the dimensions of the viewport
-      const viewportWidth = canvasRef.current?.clientWidth || 0;
-      const viewportHeight = canvasRef.current?.clientHeight || 0;
-
-      // Calculate the position of the viewport center in the scaled coordinate system
-      const viewportCenterX = (viewportWidth / 2 - position.x) / scale;
-      const viewportCenterY = (viewportHeight / 2 - position.y) / scale;
-
-      // Calculate a more consistent delta with normalized sensitivity
-      // Normalize the delta based on different browser behavior
-      let delta = 0;
-
-      // Use deltaMode to properly scale the delta values
-      if (e.deltaMode === 1) {
-        // DOM_DELTA_LINE
-        // Line mode (Firefox often uses this)
-        delta = e.deltaY * -0.01;
-      } else {
-        // Pixel mode (Chrome/Safari)
-        delta = e.deltaY * -0.0005; // Reduced from 0.001 for smoother zooming
+      // Skip if coming from a node
+      if ((e.target as HTMLElement).closest(".canvas-node")) {
+        return;
       }
 
-      // Apply smoothing to prevent rapid zooming
-      delta = Math.min(Math.max(delta, -0.1), 0.1);
+      e.preventDefault();
 
-      // Calculate new scale with improved logic
-      const newScale = Math.min(Math.max(scale * (1 + delta), 0.1), 5);
-      const scaleFactor = newScale / scale;
+      // Get current transform values from the ref for immediate access
+      const {
+        scale: currentScale,
+        x: currentX,
+        y: currentY,
+      } = transformRef.current;
 
-      // Adjust position to keep the center point stable
-      const newPosition = {
-        x: position.x - viewportCenterX * (scaleFactor - 1) * scale,
-        y: position.y - viewportCenterY * (scaleFactor - 1) * scale,
-      };
+      // Get dimensions and calculate viewport center
+      const viewportWidth = canvasRef.current?.clientWidth || 0;
+      const viewportHeight = canvasRef.current?.clientHeight || 0;
+      const viewportCenterX = (viewportWidth / 2 - currentX) / currentScale;
+      const viewportCenterY = (viewportHeight / 2 - currentY) / currentScale;
 
-      setPosition(newPosition);
-      setScale(newScale);
+      // Calculate smoother delta
+      let delta = e.deltaMode === 1 ? e.deltaY * -0.01 : e.deltaY * -0.0003;
+      delta = Math.min(Math.max(delta, -0.08), 0.08); // Limit to even smaller changes
+
+      // Calculate new scale
+      const newScale = Math.min(Math.max(currentScale * (1 + delta), 0.1), 5);
+      const scaleFactor = newScale / currentScale;
+
+      // Calculate new position
+      const newX =
+        currentX - viewportCenterX * (scaleFactor - 1) * currentScale;
+      const newY =
+        currentY - viewportCenterY * (scaleFactor - 1) * currentScale;
+
+      // Update the ref immediately for next wheel event
+      transformRef.current = { scale: newScale, x: newX, y: newY };
+
+      // Apply transform directly to the element for immediate visual feedback
+      if (canvasRef.current) {
+        const content = canvasRef.current.querySelector(
+          ".canvas-content"
+        ) as HTMLElement;
+        if (content) {
+          content.style.transform = `translate(${newX}px, ${newY}px) scale(${newScale})`;
+        }
+      }
+
+      // Update React state in a debounced, non-blocking way
+      debouncedStateUpdate(newScale, { x: newX, y: newY });
     },
-    [position, scale]
+    [debouncedStateUpdate]
   );
+
+  // Add zoom in and zoom out handlers
+  const handleZoomIn = useCallback(() => {
+    // Get current transform values from the ref
+    const {
+      scale: currentScale,
+      x: currentX,
+      y: currentY,
+    } = transformRef.current;
+
+    // Set a fixed zoom increment
+    const newScale = Math.min(currentScale * 1.2, 5);
+    const scaleFactor = newScale / currentScale;
+
+    // Keep the viewport center stable during zoom
+    const viewportWidth = canvasRef.current?.clientWidth || 0;
+    const viewportHeight = canvasRef.current?.clientHeight || 0;
+    const viewportCenterX = (viewportWidth / 2 - currentX) / currentScale;
+    const viewportCenterY = (viewportHeight / 2 - currentY) / currentScale;
+
+    const newX = currentX - viewportCenterX * (scaleFactor - 1) * currentScale;
+    const newY = currentY - viewportCenterY * (scaleFactor - 1) * currentScale;
+
+    // Update the ref for immediate tracking
+    transformRef.current = { scale: newScale, x: newX, y: newY };
+
+    // Apply direct DOM updates for immediate feedback
+    if (canvasRef.current) {
+      const content = canvasRef.current.querySelector(
+        ".canvas-content"
+      ) as HTMLElement;
+      if (content) {
+        content.style.transform = `translate(${newX}px, ${newY}px) scale(${newScale})`;
+      }
+    }
+
+    // Update React state
+    setScale(newScale);
+    setPosition({ x: newX, y: newY });
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    // Get current transform values from the ref
+    const {
+      scale: currentScale,
+      x: currentX,
+      y: currentY,
+    } = transformRef.current;
+
+    // Set a fixed zoom decrement
+    const newScale = Math.max(currentScale / 1.2, 0.1);
+    const scaleFactor = newScale / currentScale;
+
+    // Keep the viewport center stable during zoom
+    const viewportWidth = canvasRef.current?.clientWidth || 0;
+    const viewportHeight = canvasRef.current?.clientHeight || 0;
+    const viewportCenterX = (viewportWidth / 2 - currentX) / currentScale;
+    const viewportCenterY = (viewportHeight / 2 - currentY) / currentScale;
+
+    const newX = currentX - viewportCenterX * (scaleFactor - 1) * currentScale;
+    const newY = currentY - viewportCenterY * (scaleFactor - 1) * currentScale;
+
+    // Update the ref for immediate tracking
+    transformRef.current = { scale: newScale, x: newX, y: newY };
+
+    // Apply direct DOM updates for immediate feedback
+    if (canvasRef.current) {
+      const content = canvasRef.current.querySelector(
+        ".canvas-content"
+      ) as HTMLElement;
+      if (content) {
+        content.style.transform = `translate(${newX}px, ${newY}px) scale(${newScale})`;
+      }
+    }
+
+    // Update React state
+    setScale(newScale);
+    setPosition({ x: newX, y: newY });
+  }, []);
 
   // Then use useEffect to correctly add the event listener
   useEffect(() => {
@@ -371,15 +489,31 @@ function App() {
       overflow: "auto",
       color: darkMode ? "#E2E8F0" : "#1A202C",
       fontSize: node.fontSize ? `${node.fontSize}px` : "14px",
-      userSelect: "none" as const,
+      userSelect: "text",
       cursor: "default",
+      maxHeight: `${node.height}px`,
+    };
+
+    const handleNodeInteraction = (e: React.MouseEvent | React.TouchEvent) => {
+      e.stopPropagation();
     };
 
     return (
       <div
         key={node.id}
+        // @ts-ignore
         style={style}
         className={`canvas-node canvas-node-${node.type}`}
+        onMouseDown={handleNodeInteraction}
+        onTouchStart={handleNodeInteraction}
+        onWheel={(e) => {
+          const target = e.currentTarget;
+          const isScrollable = target.scrollHeight > target.clientHeight;
+
+          if (isScrollable) {
+            e.stopPropagation();
+          }
+        }}
       >
         {node.type === "text" && (
           <div
@@ -650,14 +784,36 @@ function App() {
             {canvasData?.nodes.map(renderNode)}
           </div>
 
-          {/* Radix UI Zoom indicator */}
-          <div className="zoom-indicator">
-            <Text size="2" weight="medium">
-              {Math.round(scale * 100)}%
-            </Text>
+          {/* Zoom controls */}
+          <div className="zoom-controls">
+            <Flex gap="1" align="center" justify="center">
+              <Button
+                size="2"
+                variant="soft"
+                onClick={handleZoomOut}
+                aria-label="Zoom out"
+              >
+                −
+              </Button>
+
+              <div className="zoom-text">
+                <Text size="2" weight="medium">
+                  {Math.round(scale * 100)}%
+                </Text>
+              </div>
+
+              <Button
+                size="2"
+                variant="soft"
+                onClick={handleZoomIn}
+                aria-label="Zoom in"
+              >
+                +
+              </Button>
+            </Flex>
           </div>
 
-          {/* Radix UI Node/Edge counter */}
+          {/* Node/Edge counter */}
           <div className="node-count-indicator">
             <Text size="2" weight="medium">
               {nodeCount} nodes, {edgeCount} edges

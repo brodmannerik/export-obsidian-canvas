@@ -73,9 +73,55 @@
 }
 
 .zoom-controls {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  background-color: white;
+  border-radius: 4px;
+  padding: 6px 10px; /* Match padding with node-count-indicator */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+}
+
+/* Style for the flex container inside zoom controls */
+.zoom-controls > div {
+  display: flex;
+  align-items: center; /* Ensure vertical alignment */
+  justify-content: center;
+  height: 100%;
+}
+
+/* Style for the zoom percentage text */
+.zoom-text {
+  margin: 0 8px;
+  min-width: 48px;
+  text-align: center;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Ensure buttons have consistent height */
+.zoom-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  height: 24px; /* Consistent height */
+}
+
+@media (max-width: 768px) {
+  .zoom-controls {
+    bottom: 12px;
+    left: 12px;
+    padding: 4px;
+  }
+
+  .zoom-text {
+    margin: 0 4px;
+    min-width: 40px;
+  }
 }
 
 .canvas-stats {

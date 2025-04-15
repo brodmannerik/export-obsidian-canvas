@@ -66,3 +66,49 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+.canvas-node {
+  /* Existing styles */
+  transition: box-shadow 0.2s ease;
+}
+
+/* Show scrollbar on hover to indicate scrollable content */
+.canvas-node:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Style the scrollbars for better visibility */
+.canvas-node::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.canvas-node::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.canvas-node::-webkit-scrollbar-track {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Make text content selectable */
+.node-content.text-content {
+  user-select: text;
+  cursor: text;
+}
+
+.canvas-content {
+  transform-style: preserve-3d;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+}
+
+.canvas-viewer {
+  -webkit-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  -o-transform: translateZ(0);
+  transform: translateZ(0);
+}

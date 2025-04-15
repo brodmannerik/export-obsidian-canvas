@@ -152,7 +152,7 @@ function App() {
   // First, define your wheel handler with useCallback
   const handleWheel = useCallback(
     (e: WheelEvent) => {
-      e.preventDefault(); // This will now work properly
+      e.preventDefault();
 
       // Get the dimensions of the viewport
       const viewportWidth = canvasRef.current?.clientWidth || 0;
@@ -162,9 +162,25 @@ function App() {
       const viewportCenterX = (viewportWidth / 2 - position.x) / scale;
       const viewportCenterY = (viewportHeight / 2 - position.y) / scale;
 
-      // Calculate scale change
-      const delta = -e.deltaY * 0.001;
-      const newScale = Math.min(Math.max(scale + delta, 0.1), 5);
+      // Calculate a more consistent delta with normalized sensitivity
+      // Normalize the delta based on different browser behavior
+      let delta = 0;
+
+      // Use deltaMode to properly scale the delta values
+      if (e.deltaMode === 1) {
+        // DOM_DELTA_LINE
+        // Line mode (Firefox often uses this)
+        delta = e.deltaY * -0.01;
+      } else {
+        // Pixel mode (Chrome/Safari)
+        delta = e.deltaY * -0.0005; // Reduced from 0.001 for smoother zooming
+      }
+
+      // Apply smoothing to prevent rapid zooming
+      delta = Math.min(Math.max(delta, -0.1), 0.1);
+
+      // Calculate new scale with improved logic
+      const newScale = Math.min(Math.max(scale * (1 + delta), 0.1), 5);
       const scaleFactor = newScale / scale;
 
       // Adjust position to keep the center point stable

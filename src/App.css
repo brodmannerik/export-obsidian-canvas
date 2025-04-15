@@ -316,6 +316,18 @@
   .canvas-node-text {
     font-size: 14px !important;
   }
+
+  .canvas-content {
+    transition: none !important; /* Disable animations on mobile */
+  }
+
+  svg {
+    filter: none !important; /* Remove expensive filters */
+  }
+
+  .canvas-node {
+    box-shadow: none !important; /* Remove shadows on mobile */
+  }
 }
 
 .empty-canvas {
@@ -480,4 +492,8 @@
 
 .canvas-node::-webkit-scrollbar-thumb:hover {
   background: rgba(128, 128, 128, 0.5);
+}
+
+.disable-images .canvas-image {
+  display: none !important;
 }

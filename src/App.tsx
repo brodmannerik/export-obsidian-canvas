@@ -144,6 +144,41 @@ function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Add this useEffect to handle memory cleanup and crash prevention
+  useEffect(() => {
+    // Mobile-specific optimizations
+    if (window.innerWidth < 768) {
+      // Lower the initial scale to reduce load
+      setScale(0.5);
+
+      // Disable image loading completely on very small screens
+      if (window.innerWidth < 480) {
+        document.documentElement.classList.add("disable-images");
+      }
+
+      // Emergency cleanup function
+      const preventCrash = () => {
+        document.querySelectorAll("svg").forEach((svg) => {
+          // @ts-ignore
+          if (!isElementVisible(svg)) {
+            svg.innerHTML = "";
+          }
+        });
+      };
+
+      // Helper function to check visibility
+      const isElementVisible = (el: HTMLElement) => {
+        const rect = el.getBoundingClientRect();
+        return rect.top < window.innerHeight && rect.bottom > 0;
+      };
+
+      // Attach our emergency handler
+      window.addEventListener("touchmove", throttle(preventCrash, 500));
+
+      return () => window.removeEventListener("touchmove", preventCrash);
+    }
+  }, []);
+
   const centerCanvas = (data: CanvasData) => {
     if (!data.nodes.length || !canvasRef.current) return;
 
@@ -360,8 +395,11 @@ function App() {
     };
   }, [dragging, handleMouseMove, handleMouseUp]);
 
-  // Modify the handleTouchStart function to ignore zoom gestures
+  // Add this function with your other touch handlers
   const handleTouchStart = useCallback((e: TouchEvent) => {
+    // Prevent default to avoid browser gestures like pull-to-refresh
+    e.preventDefault();
+
     // Only handle single-touch events for panning
     if (e.touches.length === 1) {
       lastTouchRef.current = {
@@ -369,48 +407,34 @@ function App() {
         y: e.touches[0].clientY,
       };
     }
-    // Ignore multi-touch (pinch) events by not handling them
   }, []);
 
-  // Modify the handleTouchMove function to use throttling
+  // Replace your handleTouchMove function with this more efficient version
   const handleTouchMove = useCallback(
     throttle((e: TouchEvent) => {
+      // Prevent default to avoid browser gestures
+      e.preventDefault();
+
       // Only handle single-touch events for panning
       if (e.touches.length === 1 && lastTouchRef.current) {
         const dx = e.touches[0].clientX - lastTouchRef.current.x;
         const dy = e.touches[0].clientY - lastTouchRef.current.y;
 
-        // Update reference directly for smoother animation
-        const currentX = transformRef.current.x + dx;
-        const currentY = transformRef.current.y + dy;
-        transformRef.current = {
-          ...transformRef.current,
-          x: currentX,
-          y: currentY,
-        };
+        // Use smaller movements on mobile to reduce strain
+        const dampingFactor = 0.6; // Reduce movement speed
+        const newX = position.x + dx * dampingFactor;
+        const newY = position.y + dy * dampingFactor;
 
-        // Apply transform directly to DOM for immediate feedback
-        if (canvasRef.current) {
-          const content = canvasRef.current.querySelector(
-            ".canvas-content"
-          ) as HTMLElement;
-          if (content) {
-            content.style.transform = `translate(${currentX}px, ${currentY}px) scale(${transformRef.current.scale})`;
-          }
-        }
-
-        // Update state less frequently
-        requestAnimationFrame(() => {
-          setPosition({ x: currentX, y: currentY });
-        });
+        // Simple position update that avoids reference mutation
+        setPosition({ x: newX, y: newY });
 
         lastTouchRef.current = {
           x: e.touches[0].clientX,
           y: e.touches[0].clientY,
         };
       }
-    }, 16), // Throttle to roughly 60fps
-    []
+    }, 30), // Increase throttle delay for mobile
+    [position]
   );
 
   const handleTouchEnd = useCallback(() => {
@@ -453,23 +477,23 @@ function App() {
     }
   };
 
-  // Add this function to check if a node is visible in the current viewport
+  // Add this simplified isNodeVisible function that's more efficient
   const isNodeVisible = useCallback(
     (node: CanvasNode) => {
       if (!canvasRef.current) return false;
 
-      const rect = canvasRef.current.getBoundingClientRect();
-      const viewportWidth = rect.width;
-      const viewportHeight = rect.height;
+      // Use fixed values for viewport size calculations to avoid reflow
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
 
-      // Node position adjusted for current transform
+      // Add much smaller margin on mobile
+      const margin = window.innerWidth < 768 ? 100 : 300;
+
+      // Simple bounding box check with current transform
       const nodeLeft = node.x * scale + position.x;
       const nodeTop = node.y * scale + position.y;
       const nodeRight = nodeLeft + node.width * scale;
       const nodeBottom = nodeTop + node.height * scale;
-
-      // Add some margin to prevent popping
-      const margin = 300;
 
       return (
         nodeRight + margin >= 0 &&
@@ -481,10 +505,33 @@ function App() {
     [position, scale]
   );
 
-  // Then update your rendering code
+  // Replace visibleNodes function with one that limits the number of nodes on mobile
   const visibleNodes = useMemo(() => {
     if (!canvasData?.nodes) return [];
-    return canvasData.nodes.filter(isNodeVisible);
+
+    // Filter nodes by visibility first
+    const visible = canvasData.nodes.filter(isNodeVisible);
+
+    // On mobile, limit the number of visible nodes drastically
+    if (window.innerWidth < 768) {
+      // Sort by distance to center for better user experience
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+
+      return visible
+        .sort((a, b) => {
+          const aDistSq =
+            Math.pow(a.x * scale + position.x - centerX, 2) +
+            Math.pow(a.y * scale + position.y - centerY, 2);
+          const bDistSq =
+            Math.pow(b.x * scale + position.x - centerX, 2) +
+            Math.pow(b.y * scale + position.y - centerY, 2);
+          return aDistSq - bDistSq;
+        })
+        .slice(0, 15); // Only show 15 nodes max on mobile
+    }
+
+    return visible;
   }, [canvasData?.nodes, isNodeVisible, position, scale]);
 
   // And for edges

@@ -8,7 +8,7 @@ import {
   useMemo,
   useTransition,
 } from "react";
-import { debounce } from "lodash";
+import { debounce, throttle } from "lodash";
 import "./App.css";
 
 interface CanvasNode {
@@ -76,6 +76,13 @@ function App() {
     []
   );
 
+  // Make sure your debouncedStateUpdate is properly cleaned up
+  useEffect(() => {
+    return () => {
+      debouncedStateUpdate.cancel();
+    };
+  }, [debouncedStateUpdate]);
+
   // Always use light mode
   const darkMode = false;
 
@@ -120,6 +127,21 @@ function App() {
     };
 
     loadCanvasFromPublic();
+  }, []);
+
+  useEffect(() => {
+    function handleResize() {
+      // Detect mobile device
+      if (window.innerWidth < 768) {
+        // Small mobile screens should use a less detailed view
+        setScale((prev) => Math.max(prev, 0.5)); // Ensure minimum scale on mobile
+      }
+    }
+
+    // Call once on mount and add listener
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const centerCanvas = (data: CanvasData) => {
@@ -350,24 +372,46 @@ function App() {
     // Ignore multi-touch (pinch) events by not handling them
   }, []);
 
-  // Modify the handleTouchMove function to ignore zoom gestures
-  const handleTouchMove = useCallback((e: TouchEvent) => {
-    // Only handle single-touch events for panning
-    if (e.touches.length === 1 && lastTouchRef.current) {
-      const dx = e.touches[0].clientX - lastTouchRef.current.x;
-      const dy = e.touches[0].clientY - lastTouchRef.current.y;
+  // Modify the handleTouchMove function to use throttling
+  const handleTouchMove = useCallback(
+    throttle((e: TouchEvent) => {
+      // Only handle single-touch events for panning
+      if (e.touches.length === 1 && lastTouchRef.current) {
+        const dx = e.touches[0].clientX - lastTouchRef.current.x;
+        const dy = e.touches[0].clientY - lastTouchRef.current.y;
 
-      setPosition((prev) => ({
-        x: prev.x + dx,
-        y: prev.y + dy,
-      }));
+        // Update reference directly for smoother animation
+        const currentX = transformRef.current.x + dx;
+        const currentY = transformRef.current.y + dy;
+        transformRef.current = {
+          ...transformRef.current,
+          x: currentX,
+          y: currentY,
+        };
 
-      lastTouchRef.current = {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY,
-      };
-    }
-  }, []);
+        // Apply transform directly to DOM for immediate feedback
+        if (canvasRef.current) {
+          const content = canvasRef.current.querySelector(
+            ".canvas-content"
+          ) as HTMLElement;
+          if (content) {
+            content.style.transform = `translate(${currentX}px, ${currentY}px) scale(${transformRef.current.scale})`;
+          }
+        }
+
+        // Update state less frequently
+        requestAnimationFrame(() => {
+          setPosition({ x: currentX, y: currentY });
+        });
+
+        lastTouchRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+        };
+      }
+    }, 16), // Throttle to roughly 60fps
+    []
+  );
 
   const handleTouchEnd = useCallback(() => {
     lastTouchRef.current = null;
@@ -408,6 +452,53 @@ function App() {
         return darkMode ? "#2D3748" : "#F7FAFC";
     }
   };
+
+  // Add this function to check if a node is visible in the current viewport
+  const isNodeVisible = useCallback(
+    (node: CanvasNode) => {
+      if (!canvasRef.current) return false;
+
+      const rect = canvasRef.current.getBoundingClientRect();
+      const viewportWidth = rect.width;
+      const viewportHeight = rect.height;
+
+      // Node position adjusted for current transform
+      const nodeLeft = node.x * scale + position.x;
+      const nodeTop = node.y * scale + position.y;
+      const nodeRight = nodeLeft + node.width * scale;
+      const nodeBottom = nodeTop + node.height * scale;
+
+      // Add some margin to prevent popping
+      const margin = 300;
+
+      return (
+        nodeRight + margin >= 0 &&
+        nodeLeft - margin <= viewportWidth &&
+        nodeBottom + margin >= 0 &&
+        nodeTop - margin <= viewportHeight
+      );
+    },
+    [position, scale]
+  );
+
+  // Then update your rendering code
+  const visibleNodes = useMemo(() => {
+    if (!canvasData?.nodes) return [];
+    return canvasData.nodes.filter(isNodeVisible);
+  }, [canvasData?.nodes, isNodeVisible, position, scale]);
+
+  // And for edges
+  const visibleEdges = useMemo(() => {
+    if (!canvasData?.edges || !canvasData?.nodes) return [];
+
+    // Only keep edges where both connected nodes are visible
+    const visibleNodeIds = new Set(visibleNodes.map((node) => node.id));
+
+    return canvasData.edges.filter(
+      (edge) =>
+        visibleNodeIds.has(edge.fromNode) && visibleNodeIds.has(edge.toNode)
+    );
+  }, [canvasData?.edges, visibleNodes]);
 
   const renderNode = (node: CanvasNode) => {
     const style = {
@@ -502,6 +593,8 @@ function App() {
                     src={getImagePath(node.file)}
                     alt={node.file?.split("/").pop() || "Canvas image"}
                     className="canvas-image"
+                    loading="lazy"
+                    decoding="async"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                       // @ts-ignore
@@ -719,8 +812,8 @@ function App() {
               transformOrigin: "0 0",
             }}
           >
-            {canvasData?.edges.map(renderEdge)}
-            {canvasData?.nodes.map(renderNode)}
+            {visibleEdges.map(renderEdge)}
+            {visibleNodes.map(renderNode)}
           </div>
 
           {/* Zoom controls */}

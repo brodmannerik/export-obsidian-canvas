@@ -122,6 +122,17 @@
     margin: 0 4px;
     min-width: 40px;
   }
+
+  svg {
+    /* Ensure SVGs are visible */
+    display: block !important;
+  }
+
+  svg line,
+  svg polygon {
+    /* Increase stroke width for better visibility on mobile */
+    stroke-width: 2.5;
+  }
 }
 
 .canvas-stats {

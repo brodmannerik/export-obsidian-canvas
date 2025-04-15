@@ -151,31 +151,7 @@ function App() {
       // Lower the initial scale to reduce load
       setScale(0.5);
 
-      // Disable image loading completely on very small screens
-      if (window.innerWidth < 480) {
-        document.documentElement.classList.add("disable-images");
-      }
-
-      // Emergency cleanup function
-      const preventCrash = () => {
-        document.querySelectorAll("svg").forEach((svg) => {
-          // @ts-ignore
-          if (!isElementVisible(svg)) {
-            svg.innerHTML = "";
-          }
-        });
-      };
-
-      // Helper function to check visibility
-      const isElementVisible = (el: HTMLElement) => {
-        const rect = el.getBoundingClientRect();
-        return rect.top < window.innerHeight && rect.bottom > 0;
-      };
-
-      // Attach our emergency handler
-      window.addEventListener("touchmove", throttle(preventCrash, 500));
-
-      return () => window.removeEventListener("touchmove", preventCrash);
+      // Rest of the function remains...
     }
   }, []);
 
@@ -477,19 +453,19 @@ function App() {
     }
   };
 
-  // Add this simplified isNodeVisible function that's more efficient
+  // Update the isNodeVisible function to have a reasonable margin on mobile
   const isNodeVisible = useCallback(
     (node: CanvasNode) => {
       if (!canvasRef.current) return false;
 
-      // Use fixed values for viewport size calculations to avoid reflow
+      // Use fixed values for viewport size calculations
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
 
-      // Add much smaller margin on mobile
-      const margin = window.innerWidth < 768 ? 100 : 300;
+      // Increase margin on mobile to avoid popping
+      const margin = window.innerWidth < 768 ? 200 : 300;
 
-      // Simple bounding box check with current transform
+      // Simple bounding box check
       const nodeLeft = node.x * scale + position.x;
       const nodeTop = node.y * scale + position.y;
       const nodeRight = nodeLeft + node.width * scale;
@@ -505,32 +481,14 @@ function App() {
     [position, scale]
   );
 
-  // Replace visibleNodes function with one that limits the number of nodes on mobile
+  // Remove the node limit for mobile to preserve connections
   const visibleNodes = useMemo(() => {
     if (!canvasData?.nodes) return [];
 
     // Filter nodes by visibility first
     const visible = canvasData.nodes.filter(isNodeVisible);
 
-    // On mobile, limit the number of visible nodes drastically
-    if (window.innerWidth < 768) {
-      // Sort by distance to center for better user experience
-      const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight / 2;
-
-      return visible
-        .sort((a, b) => {
-          const aDistSq =
-            Math.pow(a.x * scale + position.x - centerX, 2) +
-            Math.pow(a.y * scale + position.y - centerY, 2);
-          const bDistSq =
-            Math.pow(b.x * scale + position.x - centerX, 2) +
-            Math.pow(b.y * scale + position.y - centerY, 2);
-          return aDistSq - bDistSq;
-        })
-        .slice(0, 15); // Only show 15 nodes max on mobile
-    }
-
+    // Instead of limiting the number of nodes, show all visible ones
     return visible;
   }, [canvasData?.nodes, isNodeVisible, position, scale]);
 
@@ -870,6 +828,11 @@ function App() {
                 size="2"
                 variant="soft"
                 onClick={handleZoomOut}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleZoomOut();
+                }}
                 aria-label="Zoom out"
               >
                 −
@@ -885,6 +848,11 @@ function App() {
                 size="2"
                 variant="soft"
                 onClick={handleZoomIn}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleZoomIn();
+                }}
                 aria-label="Zoom in"
               >
                 +

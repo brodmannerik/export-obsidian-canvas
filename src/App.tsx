@@ -60,6 +60,7 @@ function App() {
 
   // Add ref to track current position and scale without re-renders
   const transformRef = useRef({ scale: 1, x: 0, y: 0 });
+  // @ts-expect-error
   const [isPending, startTransition] = useTransition();
 
   // Keep the ref in sync with the state

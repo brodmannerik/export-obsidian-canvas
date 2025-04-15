@@ -338,29 +338,6 @@ function App() {
     };
   }, [dragging, handleMouseMove, handleMouseUp]);
 
-  // Calculate distance between two touches for pinch-zoom
-  const getDistance = useCallback((touches: TouchList): number => {
-    if (touches.length < 2) return 0;
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  }, []);
-
-  // Get midpoint between touches
-  const getMidpoint = useCallback(
-    (touches: TouchList): { x: number; y: number } => {
-      if (touches.length < 2) {
-        return { x: touches[0].clientX, y: touches[0].clientY };
-      }
-
-      return {
-        x: (touches[0].clientX + touches[1].clientX) / 2,
-        y: (touches[0].clientY + touches[1].clientY) / 2,
-      };
-    },
-    []
-  );
-
   // Modify the handleTouchStart function to ignore zoom gestures
   const handleTouchStart = useCallback((e: TouchEvent) => {
     // Only handle single-touch events for panning

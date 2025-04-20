@@ -68,14 +68,6 @@ This project is built with:
   - `src/App.css`: Styling for the canvas viewer
   - `src/assets`: Static assets for the application
 
-### Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-MIT © Your Name
-
 ---
 
 _Note: This project is not affiliated with Obsidian. Obsidian is a trademark of Dynalist Inc._

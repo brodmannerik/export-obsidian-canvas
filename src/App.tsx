@@ -51,20 +51,16 @@ function App() {
   const [edgeCount, setEdgeCount] = useState(0);
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // Add new state for touch events
   const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Add ref to track current position and scale without re-renders
   const transformRef = useRef({ scale: 1, x: 0, y: 0 });
   // @ts-expect-error
   const [isPending, startTransition] = useTransition();
 
-  // Keep the ref in sync with the state
   useEffect(() => {
     transformRef.current = { scale, x: position.x, y: position.y };
   }, [scale, position]);
 
-  // Create a debounced state update function
   const debouncedStateUpdate = useMemo(
     () =>
       debounce((newScale, newPosition) => {
@@ -76,7 +72,6 @@ function App() {
     []
   );
 
-  // Make sure your debouncedStateUpdate is properly cleaned up
   useEffect(() => {
     return () => {
       debouncedStateUpdate.cancel();
@@ -86,7 +81,6 @@ function App() {
   // Always use light mode
   const darkMode = false;
 
-  // Update the getImagePath function to remove the console.log
   const getImagePath = (obsidianPath: string | undefined): string => {
     if (!obsidianPath) return "";
 
@@ -138,20 +132,15 @@ function App() {
       }
     }
 
-    // Call once on mount and add listener
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Add this useEffect to handle memory cleanup and crash prevention
   useEffect(() => {
     // Mobile-specific optimizations
     if (window.innerWidth < 768) {
-      // Lower the initial scale to reduce load
       setScale(0.5);
-
-      // Rest of the function remains...
     }
   }, []);
 
@@ -806,7 +795,7 @@ function App() {
           onMouseDown={handleMouseDown}
           style={{
             cursor: dragging ? "grabbing" : "grab",
-            touchAction: "none", // This is still important
+            touchAction: "none",
           }}
         >
           <div className="canvas-grid"></div>

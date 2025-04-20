@@ -1,0 +1,510 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Dark Mode / Light Mode Themes */
+.dark-mode {
+  --bg-color: #1e1e1e;
+  --toolbar-bg: #272727;
+  --node-border: rgba(255, 255, 255, 0.1);
+  --text-color: #e2e8f0;
+  --grid-color: rgba(255, 255, 255, 0.03);
+  --grid-color-bold: rgba(255, 255, 255, 0.05);
+  --button-bg: #383838;
+  --button-hover: #505050;
+  --button-active: #606060;
+  --button-text: #e2e8f0;
+}
+
+.light-mode {
+  --bg-color: #f7f7f7;
+  --node-border: rgba(0, 0, 0, 0.1);
+  --text-color: #1a202c;
+  --grid-color: rgba(0, 0, 0, 0.03);
+  --grid-color-bold: rgba(0, 0, 0, 0.05);
+  --toolbar-bg: #ffffff;
+  --button-bg: #f0f0f0;
+  --button-hover: #e0e0e0;
+  --button-active: #d0d0d0;
+  --button-text: #1a202c;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: var(--toolbar-bg);
+  border-bottom: 1px solid var(--node-border);
+  z-index: 100;
+  color: var(--text-color);
+}
+
+.toolbar input[type="file"] {
+  display: none;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.upload-button {
+  background-color: #7f6df2;
+  color: white;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-right: 20px;
+}
+
+.upload-button:hover {
+  background-color: #6a5acd;
+}
+
+.zoom-controls {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background-color: white;
+  border-radius: 4px;
+  padding: 6px 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+}
+
+/* Style for the flex container inside zoom controls */
+.zoom-controls > div {
+  display: flex;
+  align-items: center; /* Ensure vertical alignment */
+  justify-content: center;
+  height: 100%;
+}
+
+/* Style for the zoom percentage text */
+.zoom-text {
+  margin: 0 8px;
+  min-width: 48px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Ensure buttons have consistent height */
+.zoom-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  height: 24px; /* Consistent height */
+}
+
+@media (max-width: 768px) {
+  .zoom-controls {
+    top: 12px; /* Slightly smaller margin on mobile */
+    left: 12px;
+    padding: 4px 8px;
+  }
+
+  .zoom-text {
+    margin: 0 4px;
+    min-width: 40px;
+  }
+
+  svg {
+    /* Ensure SVGs are visible */
+    display: block !important;
+  }
+
+  svg line,
+  svg polygon {
+    /* Increase stroke width for better visibility on mobile */
+    stroke-width: 2.5;
+  }
+}
+
+.canvas-stats {
+  font-size: 13px;
+  color: var(--text-color);
+  opacity: 0.8;
+}
+
+.zoom-button {
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  border: 1px solid var(--node-border);
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s;
+}
+
+.zoom-button:hover {
+  background-color: var(--button-hover);
+}
+
+.zoom-button:active {
+  background-color: var(--button-active);
+}
+
+.zoom-level {
+  font-size: 14px;
+  min-width: 50px;
+  text-align: center;
+  color: var(--text-color);
+}
+
+.action-button,
+.theme-toggle {
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  border: 1px solid var(--node-border);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.action-button:hover,
+.theme-toggle:hover {
+  background-color: var(--button-hover);
+}
+
+.action-button:active,
+.theme-toggle:active {
+  background-color: var(--button-active);
+}
+
+.canvas-viewer {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  pointer-events: auto; /* Ensure the canvas itself can be dragged */
+}
+
+.canvas-viewer:active {
+  cursor: grabbing;
+}
+
+/* Add a grid background */
+.canvas-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background-size: 40px 40px;
+  background-image: linear-gradient(
+      to right,
+      var(--grid-color) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+  z-index: 0;
+}
+
+.canvas-grid:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background-size: 200px 200px;
+  background-image: linear-gradient(
+      to right,
+      var(--grid-color-bold) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, var(--grid-color-bold) 1px, transparent 1px);
+  z-index: 0;
+}
+
+.canvas-content {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+  cursor: grab;
+  transform-style: preserve-3d;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  -o-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+.canvas-content:active {
+  cursor: grabbing;
+}
+
+/* Prevent text selection during touch operations */
+.canvas-content * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Zoom indicator */
+.zoom-indicator {
+  position: absolute;
+  top: 16px; /* Changed from bottom to top */
+  left: 16px;
+  background-color: white;
+  border-radius: 4px;
+  padding: 6px 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Node count indicator */
+.node-count-indicator {
+  position: absolute;
+  top: 16px; /* Changed from bottom to top */
+  right: 16px;
+  background-color: white;
+  border-radius: 4px;
+  padding: 6px 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  .zoom-indicator,
+  .node-count-indicator {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  .zoom-indicator {
+    top: 12px;
+    left: 12px;
+  }
+
+  .node-count-indicator {
+    top: 12px;
+    right: 12px;
+  }
+
+  .canvas-node {
+    /* Slightly smaller padding on mobile */
+    padding: 6px 10px;
+  }
+
+  /* Make sure text is readable on smaller screens */
+  .canvas-node-text {
+    font-size: 14px !important;
+  }
+
+  .canvas-content {
+    transition: none !important; /* Disable animations on mobile */
+  }
+
+  svg {
+    filter: none !important; /* Remove expensive filters */
+  }
+
+  .canvas-node {
+    box-shadow: none !important; /* Remove shadows on mobile */
+  }
+}
+
+.empty-canvas {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: #666;
+  font-size: 18px;
+}
+
+/* Node styling */
+.canvas-node {
+  position: absolute;
+  border-radius: 3px;
+  overflow: auto;
+  box-sizing: border-box;
+  transition: box-shadow 0.2s ease-in-out;
+  pointer-events: none; /* Make nodes non-interactive */
+  contain: layout paint;
+  will-change: transform;
+}
+
+.canvas-node p {
+  margin: 0 0 10px;
+}
+
+/* Node type specific styling */
+.canvas-node-text {
+  padding: 10px 12px;
+  line-height: 1.4;
+}
+
+.canvas-node-file .file-header,
+.canvas-node-link .link-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--node-border);
+}
+
+.wiki-link {
+  color: #6b9cff;
+  border-bottom: 1px solid rgba(107, 156, 255, 0.3);
+  cursor: pointer;
+}
+
+.canvas-node-file .file-icon,
+.canvas-node-link .link-icon {
+  flex-shrink: 0;
+}
+
+.canvas-node-file .file-placeholder {
+  height: 75%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Add these styles for images */
+
+.file-content-container {
+  position: relative;
+  aspect-ratio: 16/9; /* Default aspect ratio */
+  min-height: 100px; /* Minimum height */
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  height: calc(100% - 40px); /* Account for header */
+}
+
+.canvas-image {
+  position: relative;
+  object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
+  contain: content;
+  width: auto;
+  height: auto;
+  display: block;
+}
+
+.image-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(128, 128, 128, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  gap: 10px;
+}
+
+.canvas-node-file .image-placeholder span {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.canvas-node-link .link-url {
+  color: #6b9cff;
+  text-decoration: none;
+  word-break: break-all;
+  pointer-events: auto;
+}
+
+.canvas-node-link .link-url:hover {
+  text-decoration: underline;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--bg-color);
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  color: var(--text-color);
+}
+
+.error-message {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #e53e3e;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  max-width: 80%;
+  text-align: center;
+}
+
+/* Scrollbar styling */
+.canvas-node::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  pointer-events: auto;
+}
+
+.canvas-node::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.canvas-node::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 3px;
+}
+
+.canvas-node::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.5);
+}
+
+.disable-images .canvas-image {
+  display: none !important;
+}
